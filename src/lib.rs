@@ -30,7 +30,7 @@ impl BloomFilter {
         let multiplier = -false_positive_probability.ln() / 2f32.ln().powf(2.0);
         let size = (max_insertions as f32 * multiplier).ceil();
 
-        if size + 8.0 > usize::MAX as f32 {
+        if size > usize::MAX as f32 {
             panic!(
                 concat!(
                     "The bit array size required to reach this false positive bound is ",
@@ -40,19 +40,11 @@ impl BloomFilter {
             );
         }
 
-        // The size must be a multiple of 8 since the bit array is a vector of bytes.
-        let mut size_as_int = size as usize;
-        size_as_int += if size_as_int % 8 == 0 {
-            0
-        } else {
-            8 - size_as_int % 8
-        };
-
-        // No need to check this conversion since this value is strictly less than the size
-        // computed above.
+        // No need to check this conversion to `usize` since this value is strictly less than the
+        // size computed above.
         let num_hash_functions = (-false_positive_probability.log2()).ceil() as usize;
 
-        BloomFilter::new(size_as_int, num_hash_functions)
+        BloomFilter::new(size as usize, num_hash_functions)
     }
 
     pub fn insert<T: Hash>(&mut self, value: T) {

@@ -7,8 +7,15 @@ pub struct BitArray {
 
 impl BitArray {
     pub fn new(size_in_bits: usize) -> BitArray {
+        // Ensure we allocate enough bytes by rounding up to the nearest multiple of 8.
+        let size_in_bytes = if size_in_bits % 8 == 0 {
+            size_in_bits / 8
+        } else {
+            (size_in_bits + 8 - size_in_bits % 8) / 8
+        };
+
         BitArray {
-            array: vec![0; size_in_bits / 8],
+            array: vec![0; size_in_bytes],
             size_in_bits,
         }
     }
@@ -43,7 +50,7 @@ mod tests {
 
     #[test]
     fn bit_array_set_from_u64() {
-        let size = 8 * 4;
+        let size = 8 * 4 + 3;
         let mut ba = BitArray::new(size);
 
         ba.set_bit_from_u64(0);
@@ -65,7 +72,7 @@ mod tests {
 
     #[test]
     fn bit_index_from_u64() {
-        let size = 8 * 4;
+        let size = 8 * 4 + 1;
         let ba = BitArray::new(size);
 
         assert_eq!(ba.bit_index_from_u64(0), 0);
