@@ -20,14 +20,6 @@ impl BitArray {
         }
     }
 
-    pub fn set_bit(&mut self, i: usize) {
-        self.array[i / 8] = self.array[i / 8] | (TWO_TO_THE_SEVENTH >> i % 8);
-    }
-
-    pub fn get_bit(&self, i: usize) -> bool {
-        self.array[i / 8] & (TWO_TO_THE_SEVENTH >> i % 8) != 0u8
-    }
-
     pub fn set_bit_from_u64(&mut self, i: u64) {
         self.set_bit(self.bit_index_from_u64(i))
     }
@@ -36,7 +28,15 @@ impl BitArray {
         self.get_bit(self.bit_index_from_u64(i))
     }
 
-    pub fn bit_index_from_u64(&self, i: u64) -> usize {
+    fn set_bit(&mut self, i: usize) {
+        self.array[i / 8] = self.array[i / 8] | (TWO_TO_THE_SEVENTH >> i % 8);
+    }
+
+    fn get_bit(&self, i: usize) -> bool {
+        self.array[i / 8] & (TWO_TO_THE_SEVENTH >> i % 8) != 0u8
+    }
+
+    fn bit_index_from_u64(&self, i: u64) -> usize {
         // The max value of f64 is always bigger than the max usize and u64, so the conversion of
         // the integers to floats are safe. The final value is guaranteed to be less than the array
         // size in bits, which is a usize, so it is safe to convert back to a usize.
