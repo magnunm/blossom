@@ -1,39 +1,44 @@
-const TWO_TO_THE_SEVENTH: u8 = 2u8.pow(7);
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 
-pub struct BitArray {
-    array: Vec<u8>,
-    size_in_bits: usize,
+mod bit_array;
+
+use bit_array::BitArray;
+
+pub struct BloomFilter {
+    bit_array: BitArray,
+    num_hash_functions: usize,
 }
 
-impl BitArray {
-    pub fn new(size_in_bits: usize) -> BitArray {
-        BitArray {
-            array: vec![0; size_in_bits / 8],
-            size_in_bits,
+impl BloomFilter {
+    pub fn new(size: usize, num_hash_functions: usize) -> BloomFilter {
+        BloomFilter {
+            bit_array: BitArray::new(size),
+            num_hash_functions,
         }
     }
 
-    pub fn set_bit(&mut self, i: usize) {
-        self.array[i / 8] = self.array[i / 8] | (TWO_TO_THE_SEVENTH >> i % 8);
+    pub fn insert<T: Hash>(&mut self, value: T) {
+        for i in 0..self.num_hash_functions {
+            let mut hasher = DefaultHasher::new();
+            i.hash(&mut hasher);
+            value.hash(&mut hasher);
+            self.bit_array.set_bit_from_u64(hasher.finish());
+        }
     }
 
-    pub fn get_bit(&self, i: usize) -> bool {
-        self.array[i / 8] & (TWO_TO_THE_SEVENTH >> i % 8) != 0u8
-    }
+    pub fn maybe_contains<T: Hash>(&self, value: T) -> bool {
+        for i in 0..self.num_hash_functions {
+            let mut hasher = DefaultHasher::new();
+            i.hash(&mut hasher);
+            value.hash(&mut hasher);
 
-    pub fn set_bit_from_u64(&mut self, i: u64) {
-        self.set_bit(self.bit_index_from_u64(i))
-    }
+            if !self.bit_array.get_bit_from_u64(hasher.finish()) {
+                return false;
+            }
+        }
 
-    pub fn get_bit_from_u64(&mut self, i: u64) -> bool {
-        self.get_bit(self.bit_index_from_u64(i))
-    }
-
-    pub fn bit_index_from_u64(&self, i: u64) -> usize {
-        // The max value of f64 is always bigger than the max usize and u64, so the conversion of
-        // the integers to floats are safe. The final value is guaranteed to be less than the array
-        // size in bits, which is a usize, so it is safe to convert back to a usize.
-        ((i as f64 / u64::MAX as f64) * (self.size_in_bits - 1) as f64) as usize
+        true
     }
 }
 
@@ -42,55 +47,19 @@ mod tests {
     use super::*;
 
     #[test]
-    fn bit_array_set_from_u64() {
-        let size = 8 * 4;
-        let mut ba = BitArray::new(size);
+    fn insert_and_query_single_element() {
+        let mut bf = BloomFilter::new(8 * 4, 1);
 
-        ba.set_bit_from_u64(0);
-        assert_eq!(ba.get_bit(0), true);
-        assert_eq!(ba.get_bit_from_u64(0), true);
+        bf.insert(12);
+        assert_eq!(bf.maybe_contains(12), true);
+        assert_eq!(bf.maybe_contains(13), false);
+        assert_eq!(bf.maybe_contains(14), false);
 
-        ba.set_bit_from_u64(u64::MAX);
-        assert_eq!(ba.get_bit(size - 1), true);
-        assert_eq!(ba.get_bit_from_u64(u64::MAX), true);
+        let mut bf = BloomFilter::new(8 * 4, 10);
 
-        let test_u64 = u64::MAX / 2;
-        ba.set_bit_from_u64(test_u64);
-        assert_eq!(ba.get_bit_from_u64(test_u64), true);
-        let bit_index = ba.bit_index_from_u64(test_u64);
-        assert_eq!(ba.get_bit(bit_index), true);
-        assert_eq!(ba.get_bit(bit_index + 1), false);
-        assert_eq!(ba.get_bit(bit_index - 1), false);
-    }
-
-    #[test]
-    fn bit_index_from_u64() {
-        let size = 8 * 4;
-        let ba = BitArray::new(size);
-
-        assert_eq!(ba.bit_index_from_u64(0), 0);
-        assert_eq!(ba.bit_index_from_u64(u64::MAX), size - 1);
-    }
-
-    #[test]
-    fn bit_array() {
-        let size = 8 * 4;
-        let mut ba = BitArray::new(size);
-
-        ba.set_bit(size - 1);
-        assert_eq!(ba.array[size / 8 - 1], 1u8);
-        ba.set_bit(size - 2);
-        assert_eq!(ba.array[size / 8 - 1], 3u8);
-        ba.set_bit(0);
-        assert_eq!(ba.array[0], 2u8.pow(7));
-        ba.set_bit(1);
-        assert_eq!(ba.array[0], 2u8.pow(7) + 2u8.pow(6));
-        ba.set_bit(1);
-        assert_eq!(ba.array[0], 2u8.pow(7) + 2u8.pow(6));
-
-        assert_eq!(ba.get_bit(0), true);
-        assert_eq!(ba.get_bit(1), true);
-        assert_eq!(ba.get_bit(2), false);
-        assert_eq!(ba.get_bit(3), false);
+        bf.insert("foo");
+        assert_eq!(bf.maybe_contains("foo"), true);
+        assert_eq!(bf.maybe_contains("bar"), false);
+        assert_eq!(bf.maybe_contains("baz"), false);
     }
 }
