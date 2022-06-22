@@ -1,5 +1,6 @@
 const TWO_TO_THE_SEVENTH: u8 = 2u8.pow(7);
 
+/// The bit array underlying a Bloom filter.
 pub struct BitArray {
     array: Vec<u8>,
     size_in_bits: usize,
@@ -20,10 +21,12 @@ impl BitArray {
         }
     }
 
+    /// Set a bit to 1 based on the output of a hash function.
     pub fn set_bit_from_u64(&mut self, i: u64) {
         self.set_bit(self.bit_index_from_u64(i))
     }
 
+    /// Get the value of a bit based on the output of a hash function.
     pub fn get_bit_from_u64(&self, i: u64) -> bool {
         self.get_bit(self.bit_index_from_u64(i))
     }
