@@ -34,7 +34,7 @@ impl BloomFilter {
             panic!(
                 concat!(
                     "The bit array size required to reach this false positive bound is ",
-                    "larger then the maximum allowed: {}"
+                    "larger than the maximum allowed: {}"
                 ),
                 usize::MAX
             );
